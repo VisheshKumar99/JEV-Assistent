@@ -141,3 +141,10 @@ dist
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .vite/
+
+
+.env
+.venv/
+__pycache__/
+
+youtube_comments.json
