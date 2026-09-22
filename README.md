@@ -46,3 +46,56 @@ python -m agent.main
 ```
 
 The sample sends one comment to Ollama and then OpenAI. The benchmark integration will later run both providers in parallel over bounded batches.
+
+## Run the live JEV vs LLM comparison UI
+
+This streams every comment in `youtube_comments.json` to the JEV model and the
+LLM model in parallel and shows live category counts and speed in the browser.
+
+### Quick start (both at once)
+
+From the repository root, this launches the backend and the React frontend
+together and stops both on Ctrl+C:
+
+```bash
+python run.py
+```
+
+Then open `http://localhost:5173`. The manual steps below are still available if
+you prefer to run each part separately.
+
+### 1. Set the single LLM provider
+
+The UI compares one LLM against JEV, so set a single provider in `.env`:
+
+```dotenv
+LLM_PROVIDER=ollama
+```
+
+Make sure `TYPESAFE_API_KEY` (for JEV) and your chosen LLM provider are configured.
+
+### 2. Start the WebSocket backend
+
+Run from the repository root:
+
+```bash
+.venv/bin/python -m backend.server
+```
+
+It listens on `ws://localhost:8765`.
+
+### 3. Run the React frontend
+
+The frontend is a Vite + React app in `frontend/`.
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Open the printed URL (default `http://localhost:5173`) and click **Start Process**.
+
+Each comment is sent to both models at the same time. The dashboard shows, per
+model: comments processed, elapsed time, comments/sec, and a live count for
+each of the 10 categories, plus which model is currently faster.

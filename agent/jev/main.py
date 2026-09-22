@@ -1,4 +1,4 @@
-
+from agent.jev.decision import classify_youtube_comment
 
 
 if __name__ == "__main__":
@@ -14,10 +14,4 @@ if __name__ == "__main__":
     print("-" * 40)
 
     print("Comment:", result["comment"])
-    print("Sentiment:", result["sentiment"])
-    print("Intent:", result["intent"])
-    print("Toxicity:", result["toxicity"])
-    print(
-        "Needs Reply Probability:",
-        result["needs_reply_probability"]
-    )
+    print("Category:", result["category"])
