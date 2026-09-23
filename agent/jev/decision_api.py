@@ -3,7 +3,6 @@ import requests
 import json
 
 from dotenv import load_dotenv
-from agent.llm.service import CATEGORIES
 
 load_dotenv()
 
@@ -55,23 +54,12 @@ def classify_youtube_comment(comment: str):
     }
 
     response = requests.post(OPENROUTER_URL, headers=headers, data=json.dumps(payload))
-
     response.raise_for_status()
     data = response.json()
-    print("comment", comment)
-    print("response", data["answers"])
 
     choice = data["answers"]["category"]["choice"]
-    # print("choice:", choice)
-
-    # data = response.json()
-
-    # # OpenRouter chat-completion response
-    # content = data["choices"][0]["message"]["content"]
 
     return {
         "comment": comment,
         "category": choice if choice in CATEGORIES else "Other",
     }
-
-# classify_youtube_comment("where are you going")

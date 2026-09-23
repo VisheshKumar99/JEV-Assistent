@@ -36,7 +36,6 @@ export default function App() {
 
     ws.onmessage = (event) => {
       const msg = JSON.parse(event.data);
-      console.log("message", msg)
 
       if (msg.type === "start") {
         setTotal(msg.total);

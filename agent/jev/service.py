@@ -4,7 +4,7 @@ Thin wrapper over decision.classify_youtube_comment so the backend can get a
 single category string, matching the LLM classifier's contract.
 """
 
-from agent.jev.decision import classify_youtube_comment
+from agent.jev.decision_api import classify_youtube_comment
 
 
 def classify_one(comment: str) -> str:
