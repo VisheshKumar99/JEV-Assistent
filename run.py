@@ -23,7 +23,7 @@ PYTHON = str(VENV_PYTHON) if VENV_PYTHON.exists() else sys.executable
 
 def start_backend() -> subprocess.Popen:
     print("Starting backend  -> ws://localhost:8765")
-    return subprocess.Popen([PYTHON, "-m", "backend.server"], cwd=ROOT)
+    return subprocess.Popen([PYTHON, "-m", "backend.dummy_server"], cwd=ROOT)
 
 
 def start_frontend() -> subprocess.Popen:

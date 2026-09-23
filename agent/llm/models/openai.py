@@ -1,16 +1,36 @@
-from langchain_openai import ChatOpenAI
+import os
 
-from agent.config import settings
+import requests
+from dotenv import load_dotenv
+
+load_dotenv()
+
+API_KEY = os.getenv("OPENAI_API_KEY")
+if not API_KEY:
+    raise ValueError("OPENAI_API_KEY is not set.")
+
+LLM_URL = os.getenv("OPENAI_BASE_URL", "https://openrouter.ai/api/v1") + "/chat/completions"
+LLM_MODEL = os.getenv("OPENAI_MODEL", "openai/gpt-6-sol")
 
 
-def get_openai_model():
-    if not settings.OPENAI_API_KEY:
-        raise RuntimeError(
-            "OPENAI_API_KEY is not configured. Add it to .env before using OpenAI."
-        )
+def ask_llm(prompt: str) -> str:
+    """Send a prompt to OpenRouter and return the assistant's text reply."""
+    payload = {
+        "model": LLM_MODEL,
+        "messages": [
+            {"role": "user", "content": prompt}
+        ],
+    }
 
-    return ChatOpenAI(
-        model=settings.OPENAI_MODEL,
-        api_key=settings.OPENAI_API_KEY,
-        temperature=0,
+    response = requests.post(
+        LLM_URL,
+        headers={
+            "Authorization": f"Bearer {API_KEY}",
+            "Content-Type": "application/json",
+        },
+        json=payload,
     )
+    response.raise_for_status()
+    data = response.json()
+
+    return data["choices"][0]["message"]["content"]

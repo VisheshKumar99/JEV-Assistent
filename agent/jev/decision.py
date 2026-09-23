@@ -1,4 +1,5 @@
 import os
+
 from dotenv import load_dotenv
 from typesafe_sdk import Choice, TypeSafeClient
 
@@ -6,10 +7,18 @@ from agent.llm.service import CATEGORIES
 
 load_dotenv()
 
-if not os.getenv("TYPESAFE_API_KEY"):
+API_KEY = os.getenv("TYPESAFE_API_KEY")
+if not API_KEY:
     raise ValueError("TYPESAFE_API_KEY is not set.")
 
-client = TypeSafeClient()
+JEV_BASE_URL = os.getenv("JEV_BASE_URL", "https://jev-ai.pro/api")
+JEV_MODEL = os.getenv("JEV_MODEL", "jev-latest")
+
+client = TypeSafeClient(
+    api_key=API_KEY,
+    base_url=JEV_BASE_URL,
+    model=JEV_MODEL,
+)
 
 
 # Same 10 categories used by the LLM prompt, so both models can be compared.
@@ -27,6 +36,9 @@ CATEGORY_CRITERIA = {
 }
 
 
+
+
+
 def classify_youtube_comment(comment: str):
     response = client.system_one(
         state={
@@ -41,6 +53,8 @@ def classify_youtube_comment(comment: str):
     )
 
     category = response.answers["category"].choice
+    print(category)
+
 
     return {
         "comment": comment,

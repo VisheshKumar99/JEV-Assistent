@@ -36,6 +36,7 @@ export default function App() {
 
     ws.onmessage = (event) => {
       const msg = JSON.parse(event.data);
+      console.log("message", msg)
 
       if (msg.type === "start") {
         setTotal(msg.total);
@@ -89,13 +90,13 @@ export default function App() {
       </div>
 
       <div className="grid">
-        <ModelPanel
+        {/* <ModelPanel
           className="jev"
           title="JEV Model"
           tag="System-1 classifier"
           model={jev}
           categories={CATEGORIES}
-        />
+        /> */}
         <ModelPanel
           className="llm"
           title="LLM Model"
