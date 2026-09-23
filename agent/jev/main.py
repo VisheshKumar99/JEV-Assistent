@@ -1,5 +1,5 @@
 from agent.jev.decision_api import classify_youtube_comment
-from agent.jev.typesafe_jev import 
+
 
 
 if __name__ == "__main__":
@@ -10,6 +10,7 @@ if __name__ == "__main__":
     """
 
     result = classify_youtube_comment(comment)
+    print("resumt", result)
 
     print("\nYouTube Comment Classification")
     print("-" * 40)

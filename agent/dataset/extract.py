@@ -6,7 +6,7 @@ dataset = load_dataset(
     split="train"
 )
 
-dev_dataset = dataset.shuffle(seed=42).select(range(10))
+dev_dataset = dataset.shuffle(seed=42).select(range(100))
 
 comments = [
     {

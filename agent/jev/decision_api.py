@@ -33,7 +33,7 @@ def classify_youtube_comment(comment: str):
 
     payload = {
         "model": "typesafe/jev-1.13",
-        "state": "This video is amazing! I learned so much from it.",
+        "state": comment,
         "questions": {
             "category": {
                 "type": "choice",
@@ -58,9 +58,11 @@ def classify_youtube_comment(comment: str):
 
     response.raise_for_status()
     data = response.json()
-    print("response", response)
+    print("comment", comment)
+    print("response", data["answers"])
+
     choice = data["answers"]["category"]["choice"]
-    print("choice:", choice)
+    # print("choice:", choice)
 
     # data = response.json()
 
@@ -71,3 +73,5 @@ def classify_youtube_comment(comment: str):
         "comment": comment,
         "category": choice if choice in CATEGORIES else "Other",
     }
+
+# classify_youtube_comment("where are you going")

@@ -1,30 +1,20 @@
-"""Dummy WebSocket server for frontend wiring.
-
-Streams fake classification stats in the exact shape the frontend expects,
-without calling any real model. Use this to verify the socket + UI update
-loop end-to-end before hooking up the actual JEV/LLM classifiers.
-
-Message contract (matches frontend/src/App.jsx):
-    {"type": "start", "total": <int>}
-    {"type": "stats", "model": "jev"|"llm", "processed", "total",
-     "time_seconds", "speed", "counts": {<category>: <int>, ...}}
-    {"type": "done", "total": <int>}
-
-Run:
-    python -m backend.dummy_server
-"""
-
 import asyncio
 import json
-import random
+import time
+from pathlib import Path
 
 import websockets
 
+from agent.llm.service import classify_one
+from agent.jev.decision_api import classify_youtube_comment
+
+
+ROOT = Path(__file__).resolve().parent.parent
+COMMENTS_FILE = ROOT / "youtube_comments.json"
 
 HOST = "localhost"
 PORT = 8765
 
-# Same 10 categories the frontend renders.
 CATEGORIES = (
     "Praise",
     "Criticism",
@@ -38,31 +28,51 @@ CATEGORIES = (
     "Other",
 )
 
-# How many fake comments to "process".
-TOTAL = 10
+def load_comments() -> list[str]:
+    """Read the comment strings from youtube_comments.json."""
+    data = json.loads(COMMENTS_FILE.read_text(encoding="utf-8"))
+    return [row["comment"] for row in data if row.get("comment")]
 
-# Fake per-comment latency (seconds) for each model, so one races ahead.
-MODEL_DELAY = {"jev": 0.15, "llm": 0.45}
+
+COMMENTS = load_comments()
+
+TOTAL = len(COMMENTS)
 
 
-class DummyStats:
-    """Running totals for one model, filled with random categories."""
+class ModelStats:
 
     def __init__(self, model: str):
         self.model = model
-        self.counts = {category: 0 for category in CATEGORIES}
+        self.counts = {
+            category: 0
+            for category in CATEGORIES
+        }
         self.processed = 0
         self.total_ms = 0.0
 
-    def add(self, elapsed_ms: float) -> None:
+    def add(
+        self,
+        elapsed_ms: float,
+        category: str,
+    ):
         self.processed += 1
         self.total_ms += elapsed_ms
-        category = random.choice(CATEGORIES)
-        self.counts[category] += 1
 
-    def snapshot(self, total: int) -> dict:
+        if category in self.counts:
+            self.counts[category] += 1
+        else:
+            self.counts["Other"] += 1
+
+    def snapshot(self, total: int):
+
         seconds = self.total_ms / 1000
-        speed = self.processed / seconds if seconds > 0 else 0.0
+
+        speed = (
+            self.processed / seconds
+            if seconds > 0
+            else 0
+        )
+
         return {
             "type": "stats",
             "model": self.model,
@@ -74,47 +84,146 @@ class DummyStats:
         }
 
 
-async def run_model(websocket, model: str, total: int):
-    """Emit one fake stats snapshot per comment, at this model's own pace."""
-    stats = DummyStats(model)
-    delay = MODEL_DELAY.get(model, 0.3)
+async def run_jev(websocket, comments):
 
-    for _ in range(total):
-        await asyncio.sleep(delay)
-        # Add a little jitter so the numbers look real.
-        elapsed_ms = delay * 1000 * random.uniform(0.8, 1.2)
-        stats.add(elapsed_ms)
-        await websocket.send(json.dumps(stats.snapshot(total)))
+    stats = ModelStats("jev")
+
+    for comment in comments:
+
+        start = time.perf_counter()
+
+        try:
+            result = await asyncio.to_thread(
+                classify_youtube_comment,
+                comment,
+            )
+            # print("coment", result["comment"])
+            # print("JEV category", result["category"])
+
+            category = result["category"]
+
+        except Exception as e:
+
+            print("JEV error:", e)
+
+            category = "Other"
+
+        elapsed_ms = (
+            time.perf_counter() - start
+        ) * 1000
+
+        stats.add(
+            elapsed_ms,
+            category,
+        )
+
+        # print(
+        #     f"[JEV] "
+        #     f"{category} "
+        #     f"{elapsed_ms:.2f}ms"
+        # )
+
+        await websocket.send(
+            json.dumps(
+                stats.snapshot(len(comments))
+            )
+        )
+
+
+async def run_llm(websocket, comments):
+
+    stats = ModelStats("llm")
+
+    for comment in comments:
+
+        start = time.perf_counter()
+
+        try:
+
+            category = await asyncio.to_thread(
+                classify_one,
+                comment,
+            )
+
+        except Exception as e:
+
+            print("LLM error:", e)
+
+            category = "Other"
+
+        elapsed_ms = (
+            time.perf_counter() - start
+        ) * 1000
+
+        stats.add(
+            elapsed_ms,
+            category,
+        )
+
+        # print(
+        #     f"[LLM] "
+        #     f"{category} "
+        #     f"{elapsed_ms:.2f}ms"
+        # )
+
+        await websocket.send(
+            json.dumps(
+                stats.snapshot(len(comments))
+            )
+        )
 
 
 async def process(websocket):
-    total = TOTAL
 
-    await websocket.send(json.dumps({"type": "start", "total": total}))
-
-    # Two independent pipelines running at the same time, like the real server.
-    await asyncio.gather(
-        run_model(websocket, "jev", total),
-        run_model(websocket, "llm", total),
+    await websocket.send(
+        json.dumps({
+            "type": "start",
+            "total": TOTAL,
+        })
     )
 
-    await websocket.send(json.dumps({"type": "done", "total": total}))
+    # Both models process the EXACT SAME comments.
+    await asyncio.gather(
+        run_jev(websocket, COMMENTS),
+        run_llm(websocket, COMMENTS),
+    )
+
+    await websocket.send(
+        json.dumps({
+            "type": "done",
+            "total": TOTAL,
+        })
+    )
 
 
 async def handler(websocket):
+
     try:
+
         async for message in websocket:
+
             data = json.loads(message)
+
             if data.get("action") == "start":
                 await process(websocket)
+
     except websockets.ConnectionClosed:
         pass
 
 
 async def main():
-    print(f"Dummy WebSocket server running at ws://{HOST}:{PORT}")
-    async with websockets.serve(handler, HOST, PORT):
-        await asyncio.Future()  # run forever
+
+    print(
+        f"WebSocket server running at "
+        f"ws://{HOST}:{PORT}"
+    )
+
+    async with websockets.serve(
+        handler,
+        HOST,
+        PORT,
+    ):
+        await asyncio.Future()
 
 
 if __name__ == "__main__":

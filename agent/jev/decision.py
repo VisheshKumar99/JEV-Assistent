@@ -53,7 +53,7 @@ def classify_youtube_comment(comment: str):
     )
 
     category = response.answers["category"].choice
-    print(category)
+    # print(category)
 
 
     return {

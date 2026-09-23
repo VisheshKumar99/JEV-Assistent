@@ -90,20 +90,46 @@ button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
 .stat .num { font-size: 24px; font-weight: 800; }
 .stat .lbl { font-size: 12px; color: var(--muted); }
 
-ul.cats { list-style: none; padding: 0; margin: 12px 0 0; }
-ul.cats li {
+.bubbles {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 10px 6px;
+  margin: 18px 0 4px;
+}
+@media (max-width: 480px) { .bubbles { grid-template-columns: repeat(3, 1fr); } }
+
+.bubble-cell {
   display: flex;
-  justify-content: space-between;
-  padding: 8px 10px;
-  border-radius: 8px;
-  margin-bottom: 6px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  min-height: 120px;
+}
+
+.bubble {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
   background: #0f1524;
   border: 1px solid var(--line);
-  font-size: 14px;
+  /* Smoothly animate the size as counts stream in. */
+  transition: width 0.35s ease, height 0.35s ease, background 0.35s ease;
 }
-ul.cats li .count { font-weight: 700; }
-.jev ul.cats li .count { color: var(--jev); }
-.llm ul.cats li .count { color: var(--llm); }
+.jev .bubble { background: radial-gradient(circle at 50% 40%, rgba(55, 230, 180, 0.35), rgba(55, 230, 180, 0.08)); border-color: rgba(55, 230, 180, 0.4); }
+.llm .bubble { background: radial-gradient(circle at 50% 40%, rgba(122, 162, 255, 0.35), rgba(122, 162, 255, 0.08)); border-color: rgba(122, 162, 255, 0.4); }
+
+.bubble-count { font-size: 13px; font-weight: 800; }
+.jev .bubble-count { color: var(--jev); }
+.llm .bubble-count { color: var(--llm); }
+
+.bubble-label {
+  font-size: 11px;
+  color: var(--muted);
+  text-align: center;
+  line-height: 1.2;
+}
 
 .winner {
   text-align: center;

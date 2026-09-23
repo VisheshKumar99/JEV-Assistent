@@ -1,4 +1,4 @@
-from agent.llm.models.openai import ask_llm
+from agent.llm.client import ask_llm
 from agent.llm.prompts import COMMENT_PROMPT
 
 
@@ -29,4 +29,7 @@ def classify_one(comment: str, provider: str | None = None) -> str:
     """Classify a single comment and return one category."""
     prompt = COMMENT_PROMPT.format(comment=comment)
     reply = ask_llm(prompt)
+    print('reply', reply)
     return normalize_category(reply)
+
+classify_one("you are very dirty, I will kill you")
