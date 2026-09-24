@@ -4,7 +4,7 @@
   --line: #232c44;
   --text: #e8ecf5;
   --muted: #8a94ad;
-  --jev: #37e6b4;
+  --laya: #37e6b4;
   --llm: #7aa2ff;
 }
 
@@ -32,7 +32,7 @@ header p { margin: 6px 0 0; color: var(--muted); }
 }
 
 button {
-  background: linear-gradient(135deg, var(--jev), var(--llm));
+  background: linear-gradient(135deg, var(--laya), var(--llm));
   color: #06121f;
   border: 0;
   padding: 12px 26px;
@@ -55,7 +55,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
 }
 .progress > div {
   height: 100%;
-  background: linear-gradient(90deg, var(--jev), var(--llm));
+  background: linear-gradient(90deg, var(--laya), var(--llm));
   transition: width 0.2s ease;
 }
 .progress-label { text-align: center; color: var(--muted); font-size: 14px; }
@@ -76,10 +76,28 @@ button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
   border-radius: 16px;
   padding: 18px;
 }
+.panel-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
 .panel h2 { margin: 0 0 4px; font-size: 18px; }
 .panel .tag { font-size: 12px; color: var(--muted); }
-.jev h2 { color: var(--jev); }
+.laya h2 { color: var(--laya); }
 .llm h2 { color: var(--llm); }
+
+/* Currently-leading category badge */
+.leader {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  text-align: right;
+}
+.leader-lbl { font-size: 10px; text-transform: uppercase; letter-spacing: 0.6px; color: var(--muted); }
+.leader-cat { font-size: 14px; font-weight: 700; }
+.laya .leader-cat { color: var(--laya); }
+.llm .leader-cat { color: var(--llm); }
 
 .stats {
   display: flex;
@@ -104,7 +122,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
   align-items: center;
   justify-content: flex-end;
   gap: 6px;
-  min-height: 120px;
+  min-height: 124px;
 }
 
 .bubble {
@@ -114,14 +132,24 @@ button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
   border-radius: 50%;
   background: #0f1524;
   border: 1px solid var(--line);
+  cursor: default;
   /* Smoothly animate the size as counts stream in. */
-  transition: width 0.35s ease, height 0.35s ease, background 0.35s ease;
+  transition: width 0.35s ease, height 0.35s ease, background 0.35s ease, box-shadow 0.2s ease, transform 0.15s ease;
 }
-.jev .bubble { background: radial-gradient(circle at 50% 40%, rgba(55, 230, 180, 0.35), rgba(55, 230, 180, 0.08)); border-color: rgba(55, 230, 180, 0.4); }
+.bubble:hover { transform: scale(1.06); }
+.laya .bubble { background: radial-gradient(circle at 50% 40%, rgba(55, 230, 180, 0.35), rgba(55, 230, 180, 0.08)); border-color: rgba(55, 230, 180, 0.4); }
 .llm .bubble { background: radial-gradient(circle at 50% 40%, rgba(122, 162, 255, 0.35), rgba(122, 162, 255, 0.08)); border-color: rgba(122, 162, 255, 0.4); }
 
+/* Leading bubble gets a soft glow + gentle pulse */
+.laya .bubble.lead { box-shadow: 0 0 0 2px rgba(55, 230, 180, 0.5), 0 0 22px rgba(55, 230, 180, 0.35); animation: pulse 1.6s ease-in-out infinite; }
+.llm .bubble.lead { box-shadow: 0 0 0 2px rgba(122, 162, 255, 0.5), 0 0 22px rgba(122, 162, 255, 0.35); animation: pulse 1.6s ease-in-out infinite; }
+@keyframes pulse {
+  0%, 100% { filter: brightness(1); }
+  50% { filter: brightness(1.25); }
+}
+
 .bubble-count { font-size: 13px; font-weight: 800; }
-.jev .bubble-count { color: var(--jev); }
+.laya .bubble-count { color: var(--laya); }
 .llm .bubble-count { color: var(--llm); }
 
 .bubble-label {
@@ -130,6 +158,81 @@ button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
   text-align: center;
   line-height: 1.2;
 }
+
+/* ---- Live feed of recent classifications ---- */
+.feed {
+  margin-top: 16px;
+  border-top: 1px solid var(--line);
+  padding-top: 12px;
+}
+.feed-title {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+.feed-empty { font-size: 13px; color: var(--muted); font-style: italic; }
+.feed ul { list-style: none; margin: 0; padding: 0; }
+.feed li {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 6px 0;
+  border-bottom: 1px solid rgba(35, 44, 68, 0.5);
+  font-size: 13px;
+  animation: slidein 0.35s ease;
+}
+.feed li:last-child { border-bottom: 0; }
+@keyframes slidein {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.feed-text {
+  flex: 1;
+  min-width: 0;
+  color: var(--text);
+  line-height: 1.35;
+  /* Wrap long comments onto new lines instead of overflowing, and break
+     very long unbroken tokens (urls, emoji spam) so they never push the
+     row wider than the panel. Clamp to 3 lines to keep rows compact. */
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.feed-ms {
+  flex-shrink: 0;
+  color: var(--muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  padding-top: 1px;
+}
+.chip { margin-top: 1px; }
+
+.chip {
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: #0f1524;
+  color: var(--text);
+}
+/* Category-specific chip colors */
+.chip.cat-praise        { color: #37e6b4; border-color: rgba(55,230,180,0.5); }
+.chip.cat-criticism     { color: #ff8a8a; border-color: rgba(255,138,138,0.5); }
+.chip.cat-question      { color: #7aa2ff; border-color: rgba(122,162,255,0.5); }
+.chip.cat-suggestion    { color: #b78bff; border-color: rgba(183,139,255,0.5); }
+.chip.cat-spam-promotion{ color: #ffd166; border-color: rgba(255,209,102,0.5); }
+.chip.cat-toxicity      { color: #ff5d73; border-color: rgba(255,93,115,0.5); }
+.chip.cat-humor         { color: #ffb454; border-color: rgba(255,180,84,0.5); }
+.chip.cat-personal-story{ color: #4dd0e1; border-color: rgba(77,208,225,0.5); }
+.chip.cat-technical-issue{ color: #9fb3c8; border-color: rgba(159,179,200,0.5); }
+.chip.cat-other         { color: var(--muted); }
 
 .winner {
   text-align: center;

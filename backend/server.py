@@ -1,6 +1,6 @@
-"""Simple WebSocket server that streams JEV vs LLM classification stats.
+"""Simple WebSocket server that streams LAYA vs LLM classification stats.
 
-For every comment it runs the JEV model and the LLM model in parallel. The
+For every comment it runs the LAYA model and the LLM model in parallel. The
 backend keeps the running totals for each model (elapsed time, per-category
 counts, processed count, speed) and sends each model its own snapshot as soon
 as it finishes a comment. The frontend just displays what it receives.
@@ -14,8 +14,8 @@ from pathlib import Path
 import websockets
 
 from agent.config import settings
-from agent.jev.service import classify_one as jev_classify
- 
+from agent.jev.service import classify_one as laya_classify
+
 from agent.llm.service import CATEGORIES, classify_one as llm_classify
 
 
@@ -39,10 +39,16 @@ class ModelStats:
         self.counts = {category: 0 for category in CATEGORIES}
         self.processed = 0
         self.total_ms = 0.0
+        self.last_comment: str | None = None
+        self.last_category: str | None = None
+        self.last_ms: float = 0.0
 
-    def add(self, category: str | None, elapsed_ms: float) -> None:
+    def add(self, comment: str, category: str | None, elapsed_ms: float) -> None:
         self.processed += 1
         self.total_ms += elapsed_ms
+        self.last_comment = comment
+        self.last_category = category
+        self.last_ms = elapsed_ms
         if category in self.counts:
             self.counts[category] += 1
 
@@ -57,6 +63,10 @@ class ModelStats:
             "time_seconds": round(seconds, 2),
             "speed": round(speed, 2),
             "counts": self.counts,
+            # Latest classification, so the UI can show a live feed.
+            "last_comment": self.last_comment,
+            "last_category": self.last_category,
+            "last_ms": round(self.last_ms, 1),
         }
 
 
@@ -84,7 +94,7 @@ async def run_model(websocket, model: str, fn, comments: list[str], total: int):
 
     for comment in comments:
         result = await asyncio.to_thread(classify_safe, fn, comment)
-        stats.add(result["category"], result["elapsed_ms"])
+        stats.add(comment, result["category"], result["elapsed_ms"])
         await websocket.send(json.dumps(stats.snapshot(total)))
 
 
@@ -96,7 +106,7 @@ async def process(websocket):
 
     # Two independent pipelines running at the same time.
     await asyncio.gather(
-        run_model(websocket, "jev", jev_classify, comments, total),
+        run_model(websocket, "laya", laya_classify, comments, total),
         run_model(
             websocket,
             "llm",

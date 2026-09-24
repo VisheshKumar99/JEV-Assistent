@@ -8,23 +8,43 @@ const CATEGORIES = [
   "Toxicity", "Humor", "Personal Story", "Technical Issue", "Other",
 ];
 
+const MAX_FEED = 8; // how many recent classifications to keep per model
+
 // A fresh, empty snapshot for one model. The backend fills these in.
 function emptyModel() {
   const counts = {};
   CATEGORIES.forEach((c) => (counts[c] = 0));
-  return { counts, processed: 0, time_seconds: 0, speed: 0 };
+  return { counts, processed: 0, time_seconds: 0, speed: 0, feed: [] };
 }
 
 export default function App() {
-  const [jev, setJev] = useState(emptyModel);
+  const [laya, setLaya] = useState(emptyModel);
   const [llm, setLlm] = useState(emptyModel);
   const [total, setTotal] = useState(0);
   const [status, setStatus] = useState("Idle");
   const [running, setRunning] = useState(false);
   const wsRef = useRef(null);
 
+  // Merge a backend snapshot into the model state, keeping a rolling feed of
+  // the most recent classifications so the UI can show live activity.
+  function applySnapshot(prev, msg) {
+    let feed = prev.feed || [];
+    if (msg.last_comment) {
+      feed = [
+        {
+          id: msg.processed,
+          comment: msg.last_comment,
+          category: msg.last_category || "Other",
+          ms: msg.last_ms,
+        },
+        ...feed,
+      ].slice(0, MAX_FEED);
+    }
+    return { ...msg, feed };
+  }
+
   function start() {
-    setJev(emptyModel());
+    setLaya(emptyModel());
     setLlm(emptyModel());
     setRunning(true);
     setStatus("Connecting...");
@@ -41,9 +61,8 @@ export default function App() {
         setTotal(msg.total);
         setStatus(`0 / ${msg.total}`);
       } else if (msg.type === "stats") {
-        // Backend already computed everything; just store the snapshot.
-        if (msg.model === "jev") setJev(msg);
-        else setLlm(msg);
+        if (msg.model === "laya") setLaya((prev) => applySnapshot(prev, msg));
+        else setLlm((prev) => applySnapshot(prev, msg));
       } else if (msg.type === "done") {
         setStatus(`Done — ${msg.total} comments`);
         setRunning(false);
@@ -57,22 +76,22 @@ export default function App() {
     };
   }
 
-  const done = Math.min(jev.processed, llm.processed);
+  const done = Math.min(laya.processed, llm.processed);
   const pct = total ? (done / total) * 100 : 0;
 
   // Speed comparison uses the speeds the backend sent.
   let winner = null;
-  if (jev.speed && llm.speed) {
-    const faster = jev.speed >= llm.speed ? "JEV" : "LLM";
-    const factor = (Math.max(jev.speed, llm.speed) / Math.min(jev.speed, llm.speed)).toFixed(1);
+  if (laya.speed && llm.speed) {
+    const faster = laya.speed >= llm.speed ? "LAYA" : "LLM";
+    const factor = (Math.max(laya.speed, llm.speed) / Math.min(laya.speed, llm.speed)).toFixed(1);
     winner = { faster, factor };
   }
 
   return (
     <div className="app">
       <header>
-        <h1>JEV vs LLM — Live Comment Classifier</h1>
-        <p>Each comment is sent to both models in parallel. Watch the counts and speed update live.</p>
+        <h1>LAYA vs LLM — Live Comment Classifier</h1>
+        <p>Each comment is sent to both models in parallel. Watch the counts, the live feed, and the speed race update in real time.</p>
       </header>
 
       <div className="bar">
@@ -90,10 +109,10 @@ export default function App() {
 
       <div className="grid">
         <ModelPanel
-          className="jev"
-          title="JEV Model"
-          tag="System-1 classifier"
-          model={jev}
+          className="laya"
+          title="LAYA Model"
+          tag="Typed decision model"
+          model={laya}
           categories={CATEGORIES}
         />
         <ModelPanel
@@ -108,7 +127,7 @@ export default function App() {
       <div className="winner">
         {winner && (
           <>
-            Speed: <b>{winner.faster}</b> is about <b>{winner.factor}x</b> faster right now.
+            Speed race: <b>{winner.faster}</b> is about <b>{winner.factor}x</b> faster right now.
           </>
         )}
       </div>
