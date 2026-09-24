@@ -5,7 +5,12 @@ single category string, matching the LLM classifier's contract.
 """
 
 from agent.jev.decision_api import classify_youtube_comment
+from agent.jev.laya_decision_api import classify_youtube_comment
 
+
+def classify_one_jev(comment: str) -> str:
+    """Classify a single comment into exactly one shared category."""
+    return classify_youtube_comment(comment)["category"]
 
 def classify_one(comment: str) -> str:
     """Classify a single comment into exactly one shared category."""
